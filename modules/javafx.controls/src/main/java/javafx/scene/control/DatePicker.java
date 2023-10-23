@@ -145,13 +145,17 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         setAccessibleRole(AccessibleRole.DATE_PICKER);
         setEditable(true);
 
-        focusedProperty().addListener(o -> {
+         focusedProperty().addListener(o -> {
             if (!isFocused()) {
-                commitValue();
+                commitValueOnFocusLost();
             }
         });
     }
-
+    
+    public void commitValueOnFocusLost(){
+	    commitValue(); 
+    }
+    
     private boolean validateDate(Chronology chrono, LocalDate date) {
         try {
             if (date != null) {
