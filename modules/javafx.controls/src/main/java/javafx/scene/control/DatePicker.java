@@ -152,9 +152,17 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         });
     }
     
+    /**
+     * This is to address https://bugs.openjdk.org/browse/JDK-8303478
+     */
     public void commitValueOnFocusLost(){
-	    commitValue(); 
+        try {
+            commitValue();
+        } catch (DateTimeParseException dtpe) {
+            this.requestFocus();
+        }
     }
+
     
     private boolean validateDate(Chronology chrono, LocalDate date) {
         try {
