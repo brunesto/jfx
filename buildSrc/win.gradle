@@ -22,6 +22,20 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+ 
+ System.err.println("COMPILE_FLAGS_FILES:"+COMPILE_FLAGS_FILES);
+ System.err.println("COMPILE_TARGETS:"+COMPILE_TARGETS);
+
+
+def checkFile(msg,filename){
+ if (filename==null) 
+      System.err.println("BC:checkFile:"+msg+" null path");
+ else if (!file(cygpath(filename)).exists()) 
+    System.err.println("BC:checkFile:"+msg+" invalid path :"+filename+"  cygpath:"+cygpath(filename));
+ else
+   System.err.println("BC:checkFile:"+msg+" path ok :"+filename);
+   return filename;
+}
 
 ext.WIN = [:]
 
@@ -74,10 +88,10 @@ setupTools("windows_tools",
         }
     },
     { properties ->
-        defineProperty("WINDOWS_VS_VSINSTALLDIR", properties, "c:/Program Files (x86)/Microsoft Visual Studio/2017/Professional");
-        defineProperty("WINDOWS_VS_WINSDKDLLINSTALLDIR", properties, "c:/Program Files (x86)/Windows Kits/10/Redist/ucrt/DLLs");
+        defineProperty("WINDOWS_VS_VSINSTALLDIR", properties, "c:/Program Files (x86)/Microsoft Visual Studio/2019/Community");
+        defineProperty("WINDOWS_VS_WINSDKDLLINSTALLDIR", properties, "c:/Program Files (x86)/Windows Kits/10/Redist/10.0.19041.0/ucrt/DLLs");
         defineProperty("WINDOWS_SDK_DIR", properties, System.getenv().get("WINSDK_DIR"))
-        defineProperty("WINDOWS_SDK_VERSION", properties, "")
+        defineProperty("WINDOWS_SDK_VERSION", properties, "10.0.19041.0")
         defineProperty("WINDOWS_VS_VCINSTALLDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/VC")
         defineProperty("WINDOWS_VS_DEVENVDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
         defineProperty("WINDOWS_VS_DEVENVCMD", properties, "$WINDOWS_VS_DEVENVDIR/VCExpress.exe")
@@ -87,7 +101,7 @@ setupTools("windows_tools",
         defineProperty("WINDOWS_DXSDK_DIR", properties, System.getenv().get("DXSDK_DIR"))
         defineProperty("WINDOWS_VS_INCLUDE", properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
         defineProperty("WINDOWS_VS_VER", properties, "150")
-        defineProperty("WINDOWS_CRT_VER", properties, "150")
+        defineProperty("WINDOWS_CRT_VER", properties, "142")
         defineProperty("WINDOWS_VS_LIB", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;")
         defineProperty("WINDOWS_VS_LIBPATH", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;")
         def parfaitPath = IS_COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
@@ -101,6 +115,7 @@ setupTools("windows_tools",
     }
 )
 
+checkFile("WINDOWS_SDK_DIR:",WINDOWS_SDK_DIR);
 if (WINDOWS_SDK_DIR == null || WINDOWS_SDK_DIR == "") {
     throw new GradleException("FAIL: WINSDK_DIR not defined");
 }
@@ -156,6 +171,14 @@ ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "LIBPATH"              : WINDOWS_VS_LIBPATH,
         "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
 ];
+
+checkFile("WINDOWS_VS_VCINSTALLDIR",WINDOWS_VS_VCINSTALLDIR)
+checkFile("WINDOWS_VS_VSINSTALLDIR",WINDOWS_VS_VSINSTALLDIR)
+checkFile("WINDOWS_VS_DEVENVDIR",WINDOWS_VS_DEVENVDIR)
+checkFile("WINDOWS_VS_MSVCDIR",WINDOWS_VS_MSVCDIR)
+checkFile("WINDOWS_DXSDK_DIR",WINDOWS_DXSDK_DIR)
+
+
 def msvcVer = System.getenv("MSVC_VER")
 def msvcBinDir = ""
 if (hasProperty('toolchainDir')) {
@@ -173,6 +196,9 @@ if (hasProperty('toolchainDir')) {
                       ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
                       : "$WINDOWS_VS_VSINSTALLDIR/VC/BIN")
 }
+
+checkFile("msvcBinDir:",msvcBinDir);
+
 def compiler = IS_COMPILE_PARFAIT ? "cl.exe" : cygpath("$msvcBinDir/cl.exe")
 def linker = IS_STATIC_BUILD ? (IS_COMPILE_PARFAIT ? "lib.exe" : cygpath("$msvcBinDir/lib.exe")) : (IS_COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe"))
 def winSdkBinDir = "$WINDOWS_SDK_DIR/Bin"
@@ -193,7 +219,8 @@ def hostWinSdkBinDir = "$WINDOWS_SDK_DIR/Bin/$WINDOWS_SDK_VERSION/$HOST_ARCH"
 ext.RC = !isExecutable(RC) ? cygpath("$hostWinSdkBinDir/rc.exe") : RC
 def rcCompiler = RC
 ext.FXC = cygpath("$winSdkBinDir/fxc.exe")
-
+checkFile("WINDOWS_DXSDK_DIR",WINDOWS_DXSDK_DIR);
+checkFile("FXC",FXC);
 if (!file(FXC).exists()) {
     if (WINDOWS_DXSDK_DIR == null || WINDOWS_DXSDK_DIR == "") {
         throw new GradleException("FAIL: DXSDK_DIR not defined");
@@ -219,6 +246,9 @@ if (hasProperty('toolchainDir')) {
     }
 }
 
+
+checkFile("msvcRedstDir:",msvcRedstDir);
+
 def winSdkDllDir = "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$TARGET_ARCH"
 
 def WINDOWS_DLL_VER = WINDOWS_VS_VER
@@ -229,6 +259,9 @@ if (WINDOWS_VS_VER == "150") {
 }
 
 def vs2017DllPath = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT")
+
+checkFile("vs2017DllPath:",vs2017DllPath);
+
 if (file(vs2017DllPath).exists()) {
     ext.WIN.VS2017DLLNames = [
         "msvcp140.dll",
@@ -250,6 +283,8 @@ else {
 }
 
 def WinSDKDLLsPath = cygpath("${winSdkDllDir}")
+
+checkFile("WinSDKDLLsPath:",WinSDKDLLsPath)
 if (file(WinSDKDLLsPath).exists()) {
     ext.WIN.WinSDKDLLNames = [
         "api-ms-win-core-console-l1-1-0.dll",
